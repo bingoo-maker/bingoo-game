@@ -155,17 +155,14 @@
       obstacle.className = 'obstacle';
       obstacle.style.left = game.offsetWidth + 'px';
 
-      // 크기 조정
       if (chosen === 'obstacle_1.png' || chosen === 'obstacle_2_fixed_big.png') {
         obstacle.style.width = '100px';
       }
 
-      // 회전 조건
       if (chosen === 'obstacle_3.png' || chosen === 'obstacle_small.png') {
         obstacle.classList.add('spin');
       }
 
-      // 이중 점프 조건
       if (chosen === 'obstacle_2_fixed_big.png') {
         canDoubleJump = true;
       }
@@ -187,9 +184,9 @@
         const obsRect = obstacle.getBoundingClientRect();
 
         const collision =
-          (bingooRect.left + 20) < (obsRect.right - 10) &&
-          (bingooRect.right - 20) > (obsRect.left + 10) &&
-          (bingooRect.bottom - 10) > obsRect.top;
+          (bingooRect.left + 30) < (obsRect.right - 30) &&
+          (bingooRect.right - 30) > (obsRect.left + 30) &&
+          (bingooRect.bottom - 20) > (obsRect.top + 10);
 
         if (collision) {
           message.textContent = `게임 오버!\n최종 점수: ${score}`;
@@ -236,7 +233,6 @@
       bingoo.style.bottom = '0';
       bingoo.offsetHeight;
       bingoo.style.transition = 'bottom 0.3s ease';
-      bingoo.style.bottom = '0';
       startScreen.style.display = 'none';
       spawnObstacle();
     });
