@@ -1,0 +1,248 @@
+<!DOCTYPE html><html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>빙구 점프 게임</title>
+  <link href="https://fonts.googleapis.com/css2?family=Gmarket+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background-image: url('background.jpg');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      font-family: 'Gmarket Sans', sans-serif;
+      overflow: hidden;
+    }
+    #game {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+    #bingoo {
+      position: absolute;
+      bottom: 0;
+      left: 50px;
+      width: 120px;
+      transition: bottom 0.3s ease;
+      z-index: 10;
+    }
+    .obstacle {
+      position: absolute;
+      bottom: 0;
+      width: 50px;
+    }
+    .spin {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    #message {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 28px;
+      color: #fff;
+      text-align: center;
+      white-space: pre-line;
+    }
+    #score {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 20px;
+      color: #fff;
+    }
+    #startScreen {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    #titleFace {
+      width: 150px;
+      margin-bottom: 20px;
+    }
+    #startBtn, #restartBtn {
+      font-size: 20px;
+      padding: 10px 20px;
+      border: none;
+      background: #fff;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    #restartBtn {
+      display: none;
+      position: absolute;
+      top: 140px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <img id="bingoo" src="bingoo.png" alt="빙구">
+    <div id="message"></div>
+    <div id="score">점수: 0</div>
+    <audio id="jumpSound" src="jump.mp3"></audio>
+    <audio id="gameoverSound" src="gameover.mp3"></audio>
+    <div id="startScreen">
+      <img src="bingoo_face.png" id="titleFace">
+      <button id="startBtn">게임 시작</button>
+    </div>
+    <button id="restartBtn">다시 시작</button>
+  </div>  <script>
+    const game = document.getElementById('game');
+    const bingoo = document.getElementById('bingoo');
+    const message = document.getElementById('message');
+    const scoreDisplay = document.getElementById('score');
+    const jumpSound = document.getElementById('jumpSound');
+    const gameoverSound = document.getElementById('gameoverSound');
+    const startScreen = document.getElementById('startScreen');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+
+    const obstacleImages = ['obstacle_1.png', 'obstacle_2_fixed_big.png', 'obstacle_3.png', 'obstacle_small.png'];
+    let previousIndex = -1;
+
+    let isJumping = false;
+    let canDoubleJump = false;
+    let score = 0;
+    let gameOver = false;
+
+    function getRandomObstacle() {
+      let index;
+      do {
+        index = Math.floor(Math.random() * obstacleImages.length);
+      } while (index === previousIndex);
+      previousIndex = index;
+      return obstacleImages[index];
+    }
+
+    function jump(force) {
+      if (gameOver) return;
+      if (isJumping && !canDoubleJump) return;
+      if (isJumping && canDoubleJump) canDoubleJump = false;
+
+      isJumping = true;
+      jumpSound.currentTime = 0;
+      jumpSound.play();
+      bingoo.style.bottom = force ? '260px' : '180px';
+      setTimeout(() => {
+        bingoo.style.bottom = '0';
+        isJumping = false;
+      }, 1000);
+    }
+
+    document.addEventListener('click', () => jump(true));
+    document.addEventListener('keydown', e => {
+      if (e.code === 'Space') jump(true);
+    });
+
+    function createObstacle(speed) {
+      const obstacle = document.createElement('img');
+      const chosen = getRandomObstacle();
+      obstacle.src = chosen;
+      obstacle.className = 'obstacle';
+      obstacle.style.left = game.offsetWidth + 'px';
+
+      // 크기 조정
+      if (chosen === 'obstacle_1.png' || chosen === 'obstacle_2_fixed_big.png') {
+        obstacle.style.width = '100px';
+      }
+
+      // 회전 조건
+      if (chosen === 'obstacle_3.png' || chosen === 'obstacle_small.png') {
+        obstacle.classList.add('spin');
+      }
+
+      // 이중 점프 조건
+      if (chosen === 'obstacle_2_fixed_big.png') {
+        canDoubleJump = true;
+      }
+
+      game.appendChild(obstacle);
+
+      let pos = game.offsetWidth;
+      const interval = setInterval(() => {
+        if (gameOver) {
+          clearInterval(interval);
+          obstacle.remove();
+          return;
+        }
+
+        pos -= 5;
+        obstacle.style.left = pos + 'px';
+
+        const bingooRect = bingoo.getBoundingClientRect();
+        const obsRect = obstacle.getBoundingClientRect();
+
+        const collision =
+          (bingooRect.left + 20) < (obsRect.right - 10) &&
+          (bingooRect.right - 20) > (obsRect.left + 10) &&
+          (bingooRect.bottom - 10) > obsRect.top;
+
+        if (collision) {
+          message.textContent = `게임 오버!\n최종 점수: ${score}`;
+          gameoverSound.currentTime = 0;
+          gameoverSound.play();
+          scoreDisplay.style.display = 'none';
+          gameOver = true;
+          restartBtn.style.display = 'block';
+          clearInterval(interval);
+          obstacle.remove();
+        } else if (!obstacle.passed && obsRect.right < bingooRect.left) {
+          obstacle.passed = true;
+          score++;
+          scoreDisplay.textContent = '점수: ' + score;
+        }
+
+        if (pos < -60) {
+          clearInterval(interval);
+          obstacle.remove();
+        }
+      }, 30);
+    }
+
+    function getSpeed() {
+      if (score < 5) return 4;
+      if (score < 10) return 3.5;
+      if (score < 15) return 3;
+      if (score < 20) return 2.5;
+      if (score < 30) return 2.2;
+      if (score < 40) return 2;
+      return 1.7;
+    }
+
+    function spawnObstacle() {
+      if (gameOver) return;
+      const speed = getSpeed();
+      createObstacle(speed);
+      const nextDelay = Math.random() * 2000 + 1000;
+      setTimeout(spawnObstacle, nextDelay);
+    }
+
+    startBtn.addEventListener('click', () => {
+      bingoo.style.transition = 'none';
+      bingoo.style.bottom = '0';
+      bingoo.offsetHeight;
+      bingoo.style.transition = 'bottom 0.3s ease';
+      bingoo.style.bottom = '0';
+      startScreen.style.display = 'none';
+      spawnObstacle();
+    });
+
+    restartBtn.addEventListener('click', () => {
+      location.reload();
+    });
+  </script></body>
+</html>
